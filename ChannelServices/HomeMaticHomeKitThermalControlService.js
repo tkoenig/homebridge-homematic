@@ -22,14 +22,13 @@ HomeMaticHomeKitThermalControlService.prototype.propagateServices = function(hom
 HomeMaticHomeKitThermalControlService.prototype.createDeviceService = function(Service, Characteristic) {
   var that = this;
   this.enableLoggingService("weather");
-  this.thermostat = new Service.Thermostat(this.name);
+  this.thermostat = new Service["Thermostat"](this.name);
   this.services.push(this.thermostat);
   // init some outside values
   this.currentTemperature = -255;
   this.currentHumidity = 0;
   this.targetTemperature = -255;
   this.usecache = false; // cause of virtual devices
-  this.delayOnSet = 500; // 500ms delay
   // this.addLowBatCharacteristic(thermo,Characteristic);
 
   var mode = this.thermostat.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
@@ -95,10 +94,12 @@ HomeMaticHomeKitThermalControlService.prototype.createDeviceService = function(S
     });
   }.bind(this));
 
+  this.currentStateCharacteristic["ACTUAL_TEMPERATURE"] = this.currentTemperatureCharacteristic;
   this.currentTemperatureCharacteristic.eventEnabled = true;
 
+
   if (this.type=="THERMALCONTROL_TRANSMIT") {
-    this.currentHumidityCharacteristic = this.thermostat.getCharacteristic(Characteristic.CurrentRelativeHumidity)
+    var cchum = this.thermostat.getCharacteristic(Characteristic.CurrentRelativeHumidity)
     .on('get', function(callback) {
       that.query("ACTUAL_HUMIDITY",function(value){
         that.currentHumidity = parseFloat(value);
@@ -106,10 +107,11 @@ HomeMaticHomeKitThermalControlService.prototype.createDeviceService = function(S
       });
     }.bind(this));
 
-    this.currentHumidityCharacteristic.eventEnabled = true;
+    this.currentStateCharacteristic["ACTUAL_HUMIDITY"] = cchum;
+    cchum.eventEnabled = true;
   }
 
-  this.targetTemperatureCharacteristic = this.thermostat.getCharacteristic(Characteristic.TargetTemperature)
+  var ttemp = this.thermostat.getCharacteristic(Characteristic.TargetTemperature)
   .on('get', function(callback) {
 
     this.query("SET_TEMPERATURE",function(value) {
@@ -133,16 +135,19 @@ HomeMaticHomeKitThermalControlService.prototype.createDeviceService = function(S
   }.bind(this))
 
   .on('set', function(value, callback) {
-    if (that.state["CONTROL_MODE"]!=1) {
-      that.delayed("set", "MANU_MODE",value,that.delayOnSet);
-      that.state["CONTROL_MODE"]=1; // set to Manual Mode
+
+    if (this.state["CONTROL_MODE"]!=1) {
+      this.delayed("setrega", "MANU_MODE",value,500);
+      this.state["CONTROL_MODE"]=1; // set to Manual Mode
     } else {
-      that.delayed("set", "SET_TEMPERATURE", value,that.delayOnSet);
+      this.delayed("setrega", "SET_TEMPERATURE", value,500);
     }
     callback();
+
   }.bind(this));
 
-  this.targetTemperatureCharacteristic.eventEnabled = true;
+  this.currentStateCharacteristic["SET_TEMPERATURE"] = ttemp;
+  ttemp.eventEnabled = true;
 
   this.thermostat.getCharacteristic(Characteristic.TemperatureDisplayUnits)
   .on('get', function(callback) {
@@ -159,12 +164,6 @@ HomeMaticHomeKitThermalControlService.prototype.createDeviceService = function(S
     this.remoteGetValue("ACTUAL_HUMIDITY");
   }
   this.queryData();
-
-  // register all Datapoints for Events
-  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + ".ACTUAL_HUMIDITY",this)
-  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + ".CONTROL_MODE",this)
-  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + ".ACTUAL_TEMPERATURE",this)
-  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + ".SET_TEMPERATURE",this)
 }
 
 HomeMaticHomeKitThermalControlService.prototype.queryData = function() {
@@ -193,22 +192,14 @@ HomeMaticHomeKitThermalControlService.prototype.datapointEvent= function(dp,newV
 
   if (dp=='ACTUAL_TEMPERATURE') {
     this.currentTemperature = parseFloat(newValue);
-    this.currentTemperatureCharacteristic.updateValue(this.currentTemperature,null)
   }
 
-  if (dp=='SET_TEMPERATURE') {
-    this.targetTemperatureCharacteristic.updateValue(parseFloat(newValue),null)
-  }
-
-  if ((dp=='ACTUAL_HUMIDITY') && (this.currentHumidityCharacteristic != undefined)) {
+  if (dp=='ACTUAL_HUMIDITY') {
     this.currentHumidity = parseFloat(newValue);
-    this.currentHumidityCharacteristic.updateValue(this.currentHumidity,null)
   }
 
-  if (this.currentTemperature > -255) {
-    // only log humidity if there is a sensor for
-    let hum = (this.currentHumidity > -255) ? this.currentHumidity : 0
-    this.addLogEntry({temp:this.currentTemperature, pressure:0, humidity:hum});
+  if ((this.currentTemperature > -255) && (this.currentHumidity > -255)) {
+    that.addLogEntry({temp:that.currentTemperature, pressure:0, humidity:that.currentHumidity});
   }
 
 }

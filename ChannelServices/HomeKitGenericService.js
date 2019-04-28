@@ -130,8 +130,9 @@ HomeKitGenericService.prototype = {
       }
 
       if (logChanges) {
-        // this.log.debug("Saving log data for %s:", this.displayName);
-        // this.log.debug(JSON.stringify(data));
+        this.log.info("Saving log data for %s:", this.displayName);
+        this.log.info(JSON.stringify(data));
+
         this.loggingService.addEntry(data);
         this.lastLogEntry = data;
       }
@@ -417,13 +418,8 @@ HomeKitGenericService.prototype = {
 
   },
 
-  // Event with complete channel and dp infos
-  channelDatapointEvent:function(channel,dp,newValue) {
-    // just a stub
-  },
 
-  // Event only with datapoint infos
-  datapointEvent:function(dp,newValue,channel) {
+  datapointEvent:function(dp,newValue) {
     // just a stub
   },
 
@@ -474,8 +470,7 @@ HomeKitGenericService.prototype = {
           setTimeout(function(){targetChar.setValue(0);}, 1000);
         }
         var chnl = channel.slice(channel.indexOf(":")+1);
-        this.channelDatapointEvent(channel,dp,newValue);
-        this.datapointEvent(chnl + ":" + dp,newValue,channel);
+        this.datapointEvent(chnl + ":" + dp,newValue);
         return;
       }
 
@@ -500,13 +495,12 @@ HomeKitGenericService.prototype = {
 
         var chnl = channel.slice(channel.indexOf(":")+1);
         this.cache(chnl + ":" + dp,newValue);
-        this.datapointEvent(chnl + ":" + dp,newValue,channel);
+        this.datapointEvent(chnl + ":" + dp,newValue);
       } else {
 
         this.cache(dp,newValue);
-        this.datapointEvent(dp,newValue,channel);
+        this.datapointEvent(dp,newValue);
       }
-      this.channelDatapointEvent(channel,dp,newValue);
       this.eventupdate = false;
     } else {
       this.log.warn("channel %s or dp %s is undefined",channel,dp);

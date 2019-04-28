@@ -12,21 +12,21 @@ util.inherits(HomeMaticHomeKitThermostatService, HomeKitGenericService);
 
 
 HomeMaticHomeKitThermostatService.prototype.createDeviceService = function(Service, Characteristic) {
-  var self = this;
-  self.usecache = false;
-  var thermo = new Service.Thermostat(self.name);
-  self.services.push(thermo);
-  self.delayOnSet = 500;
-  self.enableLoggingService("thermo");
+  var that = this;
+  this.usecache = false;
+  var thermo = new Service["Thermostat"](this.name);
+  this.services.push(thermo);
+
+  this.enableLoggingService("thermo");
 
   // this.addLowBatCharacteristic(thermo,Characteristic);
 
   var mode = thermo.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
   .on('get', function(callback) {
 
-    self.query("2:SETPOINT",function(value) {
+    this.query("2:SETPOINT",function(value) {
       if (value<6.0){
-        self.currentStateCharacteristic["MODE"].setValue(1, null);
+        that.currentStateCharacteristic["MODE"].setValue(1, null);
         if (callback) callback(null,0);
       } else {
         if (callback) callback(null,1);
@@ -34,15 +34,15 @@ HomeMaticHomeKitThermostatService.prototype.createDeviceService = function(Servi
     });
 
 
-  }.bind(self));
+  }.bind(this));
 
-  self.currentStateCharacteristic["MODE"] = mode;
+  this.currentStateCharacteristic["MODE"] = mode;
   mode.eventEnabled = true;
 
   var targetMode = thermo.getCharacteristic(Characteristic.TargetHeatingCoolingState)
   .on('get', function(callback) {
 
-    self.query("2:SETPOINT",function(value) {
+    this.query("2:SETPOINT",function(value) {
       if (value<6.0){
         if (callback) callback(null,0);
       } else {
@@ -50,17 +50,17 @@ HomeMaticHomeKitThermostatService.prototype.createDeviceService = function(Servi
       }
     });
 
-  }.bind(self))
+  }.bind(this))
 
   .on('set', function(value, callback) {
     if (value==0) {
-      self.command("setrega", "2:SETPOINT", 0);
-      self.cleanVirtualDevice("SETPOINT");
+      this.command("setrega", "2:SETPOINT", 0);
+      this.cleanVirtualDevice("SETPOINT");
     } else {
-      self.cleanVirtualDevice("SETPOINT");
+      this.cleanVirtualDevice("SETPOINT");
     }
     callback();
-  }.bind(self));
+  }.bind(this));
 
   targetMode.setProps({
     format: Characteristic.Formats.UINT8,
@@ -70,33 +70,35 @@ HomeMaticHomeKitThermostatService.prototype.createDeviceService = function(Servi
     minStep: 1,
   });
 
-  self.currentTempCharacteristic = thermo.getCharacteristic(Characteristic.CurrentTemperature)
+  var cctemp = thermo.getCharacteristic(Characteristic.CurrentTemperature)
   .setProps({ minValue: -100 })
   .on('get', function(callback) {
-    self.remoteGetValue("1:TEMPERATURE",function(value){
-      self.addLogEntry({currentTemp:parseFloat(value)})
+    this.remoteGetValue("1:TEMPERATURE",function(value){
+      that.addLogEntry({currentTemp:parseFloat(value)})
       if (callback) callback(null,value);
     });
-  }.bind(self));
+  }.bind(this));
 
-  self.currentTempCharacteristic.eventEnabled = true;
+  this.currentStateCharacteristic["TEMPERATURE"] = cctemp;
+  cctemp.eventEnabled = true;
 
-  self.currentHumidityCharacteristic= thermo.getCharacteristic(Characteristic.CurrentRelativeHumidity)
+
+  var cchum = thermo.getCharacteristic(Characteristic.CurrentRelativeHumidity)
   .on('get', function(callback) {
-    self.remoteGetValue("1:HUMIDITY",function(value){
-      self.addLogEntry({humidity:parseFloat(value)})
+    this.remoteGetValue("1:HUMIDITY",function(value){
       if (callback) callback(null,value);
     });
-  }.bind(self));
+  }.bind(this));
 
-  self.currentHumidityCharacteristic.eventEnabled = true;
+  this.currentStateCharacteristic["HUMIDITY"] = cchum;
+  cchum.eventEnabled = true;
 
 
-  self.TargetTemperatureCharacteristic = thermo.getCharacteristic(Characteristic.TargetTemperature)
+  var ttemp = thermo.getCharacteristic(Characteristic.TargetTemperature)
   .setProps({ minValue: 6.0, maxValue: 30.5, minStep: 0.1 })
   .on('get', function(callback) {
 
-    self.query("2:SETPOINT",function(value) {
+    this.query("2:SETPOINT",function(value) {
 
 
       if (value<6) {
@@ -105,34 +107,28 @@ HomeMaticHomeKitThermostatService.prototype.createDeviceService = function(Servi
       if (value>30) {
         value=30.5;
       }
-      self.addLogEntry({setTemp:parseFloat(value)})
+      that.addLogEntry({setTemp:parseFloat(value)})
       if (callback) callback(null,value);
     });
 
-  }.bind(self))
+  }.bind(this))
 
   .on('set', function(value, callback) {
     if (value>30) {
-      self.delayed("setrega", "2:SETPOINT", 100,self.delayOnSet);
+      this.delayed("setrega", "2:SETPOINT", 100,500);
     }  else {
-      self.delayed("setrega", "2:SETPOINT", value,self.delayOnSet);
+      this.delayed("setrega", "2:SETPOINT", value,500);
     }
     callback();
-  }.bind(self));
+  }.bind(this));
 
-  self.TargetTemperatureCharacteristic.eventEnabled = true;
+  this.currentStateCharacteristic["SETPOINT"] = ttemp;
+  ttemp.eventEnabled = true;
 
   thermo.getCharacteristic(Characteristic.TemperatureDisplayUnits)
   .on('get', function(callback) {
     if (callback) callback(null, Characteristic.TemperatureDisplayUnits.CELSIUS);
   }.bind(this));
-
-  let parts = self.adress.split('.');
-  self.deviceAdress = parts[0]+'.'+parts[1].split(':')[0];
-  self.platform.registerAdressForEventProcessingAtAccessory(self.deviceAdress + ":1.TEMPERATURE",self)
-  self.platform.registerAdressForEventProcessingAtAccessory(self.deviceAdress + ":2.SETPOINT",self)
-  self.platform.registerAdressForEventProcessingAtAccessory(self.deviceAdress + ":1.HUMIDITY",self)
-
 
   this.remoteGetValue("TEMPERATURE");
   this.remoteGetValue("HUMIDITY");
@@ -141,41 +137,31 @@ HomeMaticHomeKitThermostatService.prototype.createDeviceService = function(Servi
 }
 
 HomeMaticHomeKitThermostatService.prototype.queryData = function() {
-  let self = this;
-  self.query("1:HUMIDITY",function(value){
-    self.addLogEntry({humidity:parseFloat(value)})
+  var that = this;
+  this.query("HUMIDITY",function(value){
+    that.addLogEntry({humidity:parseFloat(value)})
   })
 
-  self.query("1:TEMPERATURE",function(value){
-      self.addLogEntry({currentTemp:parseFloat(value)})
+  this.query("TEMPERATURE",function(value){
+      that.addLogEntry({currentTemp:parseFloat(value)})
   });
   //create timer to query device every 10 minutes
-  self.refreshTimer = setTimeout(function(){self.queryData()}, 10 * 60 * 1000);
+  this.refreshTimer = setTimeout(function(){that.queryData()}, 10 * 60 * 1000);
 }
 
 
 HomeMaticHomeKitThermostatService.prototype.shutdown = function() {
-  let self = this;
-  clearTimeout(self.refreshTimer)
+  clearTimeout(this.refreshTimer)
 }
 
 
 HomeMaticHomeKitThermostatService.prototype.datapointEvent= function(dp,newValue) {
-  let self = this;
-  if (dp=='1:TEMPERATURE') {
-    self.addLogEntry({ currentTemp:parseFloat(newValue)});
-    this.currentTempCharacteristic.updateValue(parseFloat(newValue),null);
+  if (dp=='TEMPERATURE') {
+    that.addLogEntry({ currentTemp:parseFloat(newValue)});
   }
 
-  if (dp=='1:HUMIDITY') {
-    self.addLogEntry({ currentTemp:parseFloat(newValue)});
-    self.currentHumidityCharacteristic.updateValue(parseFloat(newValue),null);
-  }
-
-
-  if (dp=='2:SETPOINT') {
-    self.addLogEntry({ setTemp:parseFloat(newValue)});
-    self.TargetTemperatureCharacteristic.updateValue(parseFloat(newValue),null);
+  if (dp=='SETPOINT') {
+    that.addLogEntry({ setTemp:parseFloat(newValue)});
   }
 }
 

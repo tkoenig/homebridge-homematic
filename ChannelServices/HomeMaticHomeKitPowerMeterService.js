@@ -10,6 +10,69 @@ function HomeMaticHomeKitPowerMeterService(log,platform, id ,name, type ,adress,
 
 util.inherits(HomeMaticHomeKitPowerMeterService, HomeKitGenericService);
 
+
+HomeMaticHomeKitPowerMeterService.prototype.propagateServices = function(homebridge, Service, Characteristic) {
+
+  // Enable the Logging Service for Energy
+  this.enableLoggingService("energy");
+
+  // Register new Characteristic or Services here
+  var uuid = homebridge.uuid;
+
+
+  Characteristic.VoltageCharacteristic = function() {
+    var charUUID = uuid.generate('E863F10A-079E-48FF-8F27-9C2605A29F52');
+    Characteristic.call(this, 'Voltage', charUUID);
+    this.setProps({
+      format: Characteristic.Formats.UInt16,
+      unit: "V",
+      perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
+    });
+    this.value = this.getDefaultValue();
+  };
+
+  util.inherits(Characteristic.VoltageCharacteristic, Characteristic);
+
+
+  Characteristic.CurrentCharacteristic = function() {
+    var charUUID = uuid.generate('E863F126-079E-48FF-8F27-9C2605A29F52');
+    Characteristic.call(this, 'Current', charUUID);
+    this.setProps({
+      format: Characteristic.Formats.UInt16,
+      unit: "A",
+      perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
+    });
+    this.value = this.getDefaultValue();
+  };
+
+  util.inherits(Characteristic.CurrentCharacteristic, Characteristic);
+
+  Characteristic.PowerCharacteristic = function() {
+    var charUUID = uuid.generate('E863F10D-079E-48FF-8F27-9C2605A29F52');
+    Characteristic.call(this, 'Power', charUUID);
+    this.setProps({
+      format: Characteristic.Formats.UInt16,
+      unit: "W",
+      perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
+    });
+    this.value = this.getDefaultValue();
+  };
+
+  util.inherits(Characteristic.PowerCharacteristic, Characteristic);
+
+
+
+  Service.PowerMeterService = function(displayName, subtype) {
+    var servUUID = uuid.generate('E863F117-079E-48FF-8F27-9C2605A29F52');
+    Service.call(this, displayName, servUUID, subtype);
+    this.addCharacteristic(Characteristic.VoltageCharacteristic);
+    this.addCharacteristic(Characteristic.CurrentCharacteristic);
+    this.addCharacteristic(Characteristic.PowerCharacteristic);
+  };
+
+  util.inherits(Service.PowerMeterService, Service);
+}
+
 HomeMaticHomeKitPowerMeterService.prototype.shutdown = function() {
   clearTimeout(this.refreshTimer)
 }
@@ -17,39 +80,44 @@ HomeMaticHomeKitPowerMeterService.prototype.shutdown = function() {
 HomeMaticHomeKitPowerMeterService.prototype.createDeviceService = function(Service, Characteristic) {
 
   var that = this;
-  this.enableLoggingService("energy");
+
   var sensor = new Service["PowerMeterService"](this.name);
-  this.voltage = sensor.getCharacteristic(Characteristic.VoltageCharacteristic)
+  var voltage = sensor.getCharacteristic(Characteristic.VoltageCharacteristic)
   .on('get', function(callback) {
     that.query("2:VOLTAGE",function(value){
-      if (callback) callback(null,Number(value).toFixed(2));
+      if (callback) callback(null,value);
     });
   }.bind(this));
 
-  this.voltage.eventEnabled = true;
+  this.currentStateCharacteristic["2:VOLTAGE"] = voltage;
+  voltage.eventEnabled = true;
 
-  this.current = sensor.getCharacteristic(Characteristic.CurrentCharacteristic)
+  var current = sensor.getCharacteristic(Characteristic.CurrentCharacteristic)
   .on('get', function(callback) {
     that.query("2:CURRENT",function(value){
       if (value!=undefined) {
-        if (callback) callback(null,Number(value).toFixed(4));
+        if (callback) callback(null,value);
       } else {
         if (callback) callback(null,0);
       }
     });
   }.bind(this));
 
-  this.current.eventEnabled = true;
+  this.currentStateCharacteristic["2:CURRENT"] = current;
+  current.eventEnabled = true;
 
-  this.power = sensor.getCharacteristic(Characteristic.PowerCharacteristic)
+  var power = sensor.getCharacteristic(Characteristic.PowerCharacteristic)
   .on('get', function(callback) {
     that.query("2:POWER",function(value){
       that.addLogEntry({power:parseFloat(value)})
-      if (callback) callback(null,Number(value).toFixed(2));
+      if (callback) callback(null,value);
     });
   }.bind(this));
 
-  this.power.eventEnabled = true;
+  this.currentStateCharacteristic["2:POWER"] = power;
+  power.eventEnabled = true;
+
+
   this.services.push(sensor);
 
   this.addValueFactor("CURRENT",0.001);
@@ -92,12 +160,6 @@ HomeMaticHomeKitPowerMeterService.prototype.createDeviceService = function(Servi
   this.services.push(outlet);
 
   this.cadress = this.adress.replace(":2",":1");
-
-
-  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + ".POWER",this)
-  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + ".VOLTAGE",this)
-  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + ".CURRENT",this)
-
   this.queryData();
 }
 
@@ -105,35 +167,16 @@ HomeMaticHomeKitPowerMeterService.prototype.createDeviceService = function(Servi
 HomeMaticHomeKitPowerMeterService.prototype.queryData = function() {
   var that = this;
   this.query("2:POWER",function(value){
-    that.datapointEvent("2:POWER",value)
-  });
-
-  this.query("2:VOLTAGE",function(value){
-    that.datapointEvent("2:VOLTAGE",value)
-  });
-
-  this.query("2:CURRENT",function(value){
-    that.datapointEvent("2:CURRENT",value)
+    that.addLogEntry({power:parseFloat(value)})
   });
   //create timer to query device every 10 minutes
   this.refreshTimer = setTimeout(function(){that.queryData()}, 10 * 60 * 1000);
 }
-
+if (this.loggingService != undefined) {
 HomeMaticHomeKitPowerMeterService.prototype.datapointEvent= function(dp,newValue) {
-
-  if (dp=='2:CURRENT') {
-    this.current.updateValue(Number(newValue).toFixed(4),null)
-  }
-
-  if (dp=='2:VOLTAGE') {
-    this.voltage.updateValue(Number(newValue).toFixed(2),null)
-  }
-
   if (dp=='2:POWER') {
-    this.addLogEntry({power:parseFloat(newValue)})
-    this.power.updateValue(Number(newValue).toFixed(2),null)
+    that.addLogEntry({power:parseFloat(value)})
   }
-
 }
-
+}
 module.exports = HomeMaticHomeKitPowerMeterService;
