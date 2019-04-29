@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+oldrev=$1
+newrev=$2
+
+echo "Installing dependencies..."
+npm install --only=prod
+
+# # clear cached assets (unversioned/ignored files)
+# run "git clean -x -f -- public/stylesheets public/javascripts"
+
+# # clean unversioned files from vendor/plugins (e.g. old submodules)
+# run "git clean -d -f -- vendor/plugins"

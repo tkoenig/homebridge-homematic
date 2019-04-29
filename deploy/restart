@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "restarting Homebridge"
+sudo systemctl restart homebridge
