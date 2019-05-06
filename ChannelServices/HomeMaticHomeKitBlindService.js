@@ -16,8 +16,11 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   this.observeInhibit = this.getClazzConfigValue('observeInhibit', false)
   this.minValueForClose = this.getClazzConfigValue('minValueForClose', 0)
   this.maxValueForOpen = this.getClazzConfigValue('maxValueForOpen', 100)
+  this.ignoreWorking = true
   this.currentLevelInterval
   this.currentLevel = 0
+  this.targetLevel = undefined;
+
   if (this.minValueForClose > 0) {
     this.log.debug('there is a custom closed level of %s', this.minValueForClose)
   }
@@ -63,6 +66,7 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
     .on('set', function (value, callback) {
       if ((that.inhibit === false) || (that.observeInhibit === false)) {
         that.log.warn('setting level to: %s', value)
+        that.targetLevel = value
         that.delayed('set', 'LEVEL', value, that.delayOnSet)
       } else {
       // wait one second to resync data
@@ -147,6 +151,7 @@ HomeMaticHomeKitBlindService.prototype.setFinalBlindLevel = function (newValue) 
   this.log.warn('setting new value: %s', newValue)
   this.currentPos.updateValue(newValue, null)
   this.targetPos.updateValue(newValue, null)
+  this.targetLevel = undefined
 }
 
 HomeMaticHomeKitBlindService.prototype.datapointEvent = function (dp, newValue) {
@@ -171,11 +176,11 @@ HomeMaticHomeKitBlindService.prototype.datapointEvent = function (dp, newValue) 
         break
       case 1: //opening - INCREASING
         this.pstate.updateValue(1, null)
-        this.targetPos.updateValue(100, null) // set target position to 100
+        this.updateTargetPostion(100) // set target position to 100
         break
       case 2: //closing - DECREASING
         this.pstate.updateValue(0, null)
-        this.targetPos.updateValue(0, null) // set target position to 0
+        this.updateTargetPostion(0)
         break
       case 3:
         this.pstate.updateValue(2, null)
@@ -201,16 +206,24 @@ HomeMaticHomeKitBlindService.prototype.datapointEvent = function (dp, newValue) 
     // Working - query for new level
     if (newValue === true) {
       //Force triggering new events every 750 ms
-      clearInterval(this.currentLevelInterval)
-      this.currentLevelInterval = setInterval(() => {
-        this.remoteGetValue('LEVEL', () => {}) // trigger events
-        }, 750)
+      // clearInterval(this.currentLevelInterval)
+      // this.currentLevelInterval = setInterval(() => {
+      //   this.remoteGetValue('LEVEL', () => {}) // trigger events
+      //   }, 750)
     } else { // STOPPED - stop quering and set tagetPosition
-      clearInterval(this.currentLevelInterval);
+      // clearInterval(this.currentLevelInterval);
       this.log.warn('Work DONE, setting current LEVEL: %s', this.currentLevel)
       this.setFinalBlindLevel(this.currentLevel)
       this.pstate.updateValue(2, null) // STOPPED
     }
+  }
+}
+
+HomeMaticHomeKitBlindService.prototype.updateTargetPostion = function (value) {
+  this.log.warn('setting targetpos to %s, current: %s',value, this.targetLevel)
+  if (this.targetLevel === undefined){
+    this.log.warn('updating target position!')
+    this.targetPos.updateValue(value, null)
   }
 }
 
