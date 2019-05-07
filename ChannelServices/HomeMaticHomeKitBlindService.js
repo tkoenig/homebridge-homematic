@@ -121,49 +121,49 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   this.queryData()
 }
 
-HomeMaticHomeKitBlindService.prototype.queryData = function (newValue) {
+HomeMaticHomeKitBlindService.prototype.queryData = function (value) {
   //trigger new event (datapointEvent)
   this.remoteGetValue('LEVEL', () => {})
 
   if (this.observeInhibit === true) {
-    this.query('INHIBIT', (newValue) => {
-      this.updateObstruction(JSON.parse(newValue)) // not sure why newValue (true/false) is currently a string? - but lets convert it if it is
+    this.query('INHIBIT', (value) => {
+      this.updateObstruction(JSON.parse(value)) // not sure why value (true/false) is currently a string? - but lets convert it if it is
     })
   }
 }
 
 // https://github.com/thkl/homebridge-homematic/issues/208
 // if there is a custom close level and the real level is below homekit will get the 0% ... and visevera for max level
-HomeMaticHomeKitBlindService.prototype.setFinalBlindLevel = function (newValue) {
-  if (newValue < this.minValueForClose) {
-    newValue = 0
+HomeMaticHomeKitBlindService.prototype.setFinalBlindLevel = function (value) {
+  if (value < this.minValueForClose) {
+    value = 0
   }
-  if (newValue > this.maxValueForOpen) {
-    newValue = 100
+  if (value > this.maxValueForOpen) {
+    value = 100
   }
 
-  this.currentPos.updateValue(newValue, null)
-  this.targetPos.updateValue(newValue, null)
+  this.currentPos.updateValue(value, null)
+  this.targetPos.updateValue(value, null)
   this.targetLevel = undefined
   this.pstate.updateValue(2, null) // STOPPED
 }
 
-HomeMaticHomeKitBlindService.prototype.datapointEvent = function (dp, newValue) {
-  this.log.debug('recieving event for %s: %s value: %s (%s)', this.adress, dp, newValue, typeof(newValue))
+HomeMaticHomeKitBlindService.prototype.datapointEvent = function (dp, value) {
+  this.log.debug('recieving event for %s: %s value: %s (%s)', this.adress, dp, value, typeof(value))
 
   if (this.isDataPointEvent(dp, 'INHIBIT')) {
-    this.inhibit = newValue
+    this.inhibit = value
     if (this.obstruction !== undefined) {
-      this.obstruction.updateValue(newValue, null)
+      this.obstruction.updateValue(value, null)
     }
   }
 
   if (this.isDataPointEvent(dp, 'DIRECTION')) {
-    this.updatePosition(newValue)
+    this.updatePosition(value)
   }
 
   // if (this.isDataPointEvent(dp, 'WORKING_SLATS')) {
-  //   if (newValue === false) {
+  //   if (value === false) {
   //     this.remoteGetValue('LEVEL', (value) => {
   //       this.currentPos.updateValue(value, null)
   //       this.targetPos.updateValue(value, null)
@@ -172,13 +172,13 @@ HomeMaticHomeKitBlindService.prototype.datapointEvent = function (dp, newValue) 
   // }
 
   if (this.isDataPointEvent(dp, 'LEVEL')) {
-    this.currentLevel = newValue
-    this.currentPos.updateValue(newValue, null)
+    this.currentLevel = value
+    this.currentPos.updateValue(value, null)
   }
 
   if (this.isDataPointEvent(dp, 'WORKING')) {
     // Working - query for new level
-    if (newValue === true) {
+    if (value === true) {
       // Force triggering new events every 750 ms
       // This is currenly not needed,
       // since there is no visual indicator in homekit while opening/closing
@@ -199,7 +199,7 @@ HomeMaticHomeKitBlindService.prototype.updatePosition = function (value) {
     // 1=UP
     // 2=DOWN
     // 3=UNDEFINED
-    switch (newValue) {
+    switch (value) {
       case 0:
         this.pstate.updateValue(2, null)
         break
@@ -218,6 +218,7 @@ HomeMaticHomeKitBlindService.prototype.updatePosition = function (value) {
         break
     }
 }
+
 HomeMaticHomeKitBlindService.prototype.guessTargetPosition = function (value) {
   // Only update Target position if it has not been set via homekit (see targetPos.on('set'))
   if (this.targetLevel === undefined){
