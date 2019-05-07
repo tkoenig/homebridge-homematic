@@ -13,14 +13,14 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   var that = this
   var blind = new Service.WindowCovering(this.name)
   this.delayOnSet = 750
-  this.observeInhibit = this.getClazzConfigValue('observeInhibit', false)
+  this.observeInhibit = this.getClazzConfigValue('observeInhibit', true)
+  this.inhibit = false
   this.minValueForClose = this.getClazzConfigValue('minValueForClose', 0)
   this.maxValueForOpen = this.getClazzConfigValue('maxValueForOpen', 100)
   this.ignoreWorking = true
-  this.currentLevelInterval
   this.currentLevel = 0
   this.targetLevel = undefined
-  this.inhibit = false
+
 
   if (this.minValueForClose > 0) {
     this.log.debug('there is a custom closed level of %s', this.minValueForClose)
@@ -35,7 +35,6 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   this.currentPos = blind.getCharacteristic(Characteristic.CurrentPosition)
     .on('get', function (callback) {
       that.query('LEVEL', function (value) {
-        that.log.warn('QUERYING LEVEL for currentPOS: %s', value)
         if (value < that.minValueForClose) {
           value = 0
         }
@@ -51,7 +50,6 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   this.targetPos = blind.getCharacteristic(Characteristic.TargetPosition)
     .on('get', function (callback) {
       that.query('LEVEL', function (value) {
-        that.log.warn('QUERYING LEVEL for targetPOS: %s', value)
         if (callback) {
           if (value <= that.minValueForClose) {
             value = 0
@@ -65,15 +63,13 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
     })
     .on('set', function (value, callback) {
       // if obstruction has been detected
-      that.log.warn('setting level to: %s, observeInhibit: %s, inhibit:%s', value, typeof(that.observeInhibit), typeof(that.inhibit))
       if ((that.observeInhibit === true) && (that.inhibit === true)) {
         // wait one second to resync data
-        that.log.warn('inhibit is true wait to resync')
+        that.log.debug('inhibit is true wait to resync')
         setTimeout(function () {
           that.queryData()
         }, 1000)
       } else {
-        that.log.warn('setting level to: %s', value)
         that.targetLevel = value
         that.delayed('set', 'LEVEL', value, that.delayOnSet)
       }
@@ -82,7 +78,6 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
 
   this.pstate = blind.getCharacteristic(Characteristic.PositionState)
     .on('get', function (callback) {
-      that.log.warn('getting pstate!')
       that.query('DIRECTION', function (value) {
         if (callback) {
           var result = 2
@@ -115,10 +110,8 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   if (this.observeInhibit === true) {
     this.obstruction = blind.getCharacteristic(Characteristic.ObstructionDetected)
       .on('get', (callback) => {
-        // that.query('INHIBIT', (value) => {
-      this.log.warn('getting inhibit state!, %s', this.inhibit)
-      callback(null, this.inhibit)
-        // }
+        this.log.debug('getting inhibit state!, %s', this.inhibit)
+        callback(null, this.inhibit)
       })
     this.obstruction.eventEnabled = true
     this.platform.registerAdressForEventProcessingAtAccessory(this.adress + '.INHIBIT', this)
@@ -131,15 +124,13 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
 }
 
 HomeMaticHomeKitBlindService.prototype.queryData = function (newValue) {
-  let that = this
-  //trigger new event
-  this.remoteGetValue('LEVEL', () => {}) // trigger events
+  //trigger new event (datapointEvent)
+  this.remoteGetValue('LEVEL', () => {})
 
   if (this.observeInhibit === true) {
-    this.remoteGetValue('INHIBIT', (newValue) => {
-      this.log.warn('REMOTE GET INHIBIT %s: %s', this.adress, newValue)
+    this.query('INHIBIT', (newValue) => {
       this.updateObstruction(JSON.parse(newValue)) // not sure why newValue (true/false) is currently a string? - but lets convert it if it is
-    }) // trigger events
+    })
   }
 }
 
@@ -153,18 +144,16 @@ HomeMaticHomeKitBlindService.prototype.setFinalBlindLevel = function (newValue) 
     newValue = 100
   }
 
-  this.log.warn('setting new value: %s', newValue)
   this.currentPos.updateValue(newValue, null)
   this.targetPos.updateValue(newValue, null)
   this.targetLevel = undefined
+  this.pstate.updateValue(2, null) // STOPPED
 }
 
 HomeMaticHomeKitBlindService.prototype.datapointEvent = function (dp, newValue) {
-  let that = this
-  this.log.warn('recieving event for %s: %s value: %s (%s)', this.adress, dp, newValue, typeof(newValue))
+  this.log.debug('recieving event for %s: %s value: %s (%s)', this.adress, dp, newValue, typeof(newValue))
 
   if (this.isDataPointEvent(dp, 'INHIBIT')) {
-    this.log.warn('RECEIVED INHIBIT for %s: %s value: %s', this.adress, dp, newValue)
     this.inhibit = newValue
     if (this.obstruction !== undefined) {
       this.obstruction.updateValue(newValue, null)
@@ -172,33 +161,14 @@ HomeMaticHomeKitBlindService.prototype.datapointEvent = function (dp, newValue) 
   }
 
   if (this.isDataPointEvent(dp, 'DIRECTION')) {
-      // 0 = NONE (Standard)
-      // 1=UP
-      // 2=DOWN
-      // 3=UNDEFINED
-    switch (newValue) {
-      case 0:
-        this.pstate.updateValue(2, null)
-        break
-      case 1: //opening - INCREASING
-        this.pstate.updateValue(1, null)
-        this.updateTargetPostion(100) // set target position to 100
-        break
-      case 2: //closing - DECREASING
-        this.pstate.updateValue(0, null)
-        this.updateTargetPostion(0)
-        break
-      case 3:
-        this.pstate.updateValue(2, null)
-        break
-    }
+    this.updatePosition(newValue)
   }
 
   // if (this.isDataPointEvent(dp, 'WORKING_SLATS')) {
   //   if (newValue === false) {
-  //     this.remoteGetValue('LEVEL', function (value) {
-  //       that.currentPos.updateValue(value, null)
-  //       that.targetPos.updateValue(value, null)
+  //     this.remoteGetValue('LEVEL', (value) => {
+  //       this.currentPos.updateValue(value, null)
+  //       this.targetPos.updateValue(value, null)
   //     })
   //   }
   // }
@@ -211,38 +181,55 @@ HomeMaticHomeKitBlindService.prototype.datapointEvent = function (dp, newValue) 
   if (this.isDataPointEvent(dp, 'WORKING')) {
     // Working - query for new level
     if (newValue === true) {
-      //Force triggering new events every 750 ms
+      // Force triggering new events every 750 ms
+      // This is currenly not needed,
+      // since there is no visual indicator in homekit while opening/closing
       // clearInterval(this.currentLevelInterval)
       // this.currentLevelInterval = setInterval(() => {
       //   this.remoteGetValue('LEVEL', () => {}) // trigger events
       //   }, 750)
+      //
     } else { // STOPPED - stop quering and set tagetPosition
       // clearInterval(this.currentLevelInterval);
-      this.log.warn('Work DONE, setting current LEVEL: %s', this.currentLevel)
       this.setFinalBlindLevel(this.currentLevel)
-      this.pstate.updateValue(2, null) // STOPPED
     }
   }
 }
 
-HomeMaticHomeKitBlindService.prototype.updateTargetPostion = function (value) {
-  this.log.warn('setting targetpos to %s, current: %s',value, this.targetLevel)
+HomeMaticHomeKitBlindService.prototype.updatePosition = function (value) {
+    // 0 = NONE (Standard)
+    // 1=UP
+    // 2=DOWN
+    // 3=UNDEFINED
+    switch (newValue) {
+      case 0:
+        this.pstate.updateValue(2, null)
+        break
+      case 1: // opening - INCREASING
+        this.pstate.updateValue(1, null)
+        // set target position to maximum, since we don't know when it stops
+        this.guessTargetPosition(100)
+        break
+      case 2: // closing - DECREASING
+        this.pstate.updateValue(0, null)
+        // same for closing
+        this.guessTargetPosition(0)
+        break
+      case 3:
+        this.pstate.updateValue(2, null)
+        break
+    }
+}
+HomeMaticHomeKitBlindService.prototype.guessTargetPosition = function (value) {
+  // Only update Target position if it has not been set via homekit (see targetPos.on('set'))
   if (this.targetLevel === undefined){
-    this.log.warn('updating target position!')
     this.targetPos.updateValue(value, null)
   }
 }
 
 HomeMaticHomeKitBlindService.prototype.updateObstruction = function (value) {
-  this.log.warn('set obstruction for %s to %s (%s)!', this.adress, value, typeof(value))
-  // if ((value == 'true') || (value == true)){
-  //   value = true
-  // } else {
-  //   value = false
-  // }
   this.inhibit = value
   this.obstruction.updateValue(value, null)
-
 }
 
 module.exports = HomeMaticHomeKitBlindService
