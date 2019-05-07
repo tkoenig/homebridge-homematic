@@ -19,7 +19,8 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   this.ignoreWorking = true
   this.currentLevelInterval
   this.currentLevel = 0
-  this.targetLevel = undefined;
+  this.targetLevel = undefined
+  this.inhibit = false
 
   if (this.minValueForClose > 0) {
     this.log.debug('there is a custom closed level of %s', this.minValueForClose)
@@ -29,7 +30,6 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
     this.log.debug('there is a custom open level of %s', this.maxValueForOpen)
   }
 
-  this.inhibit = false
   this.services.push(blind)
 
   this.currentPos = blind.getCharacteristic(Characteristic.CurrentPosition)
@@ -64,18 +64,19 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
       })
     })
     .on('set', function (value, callback) {
-      if ((that.inhibit === false) || (that.observeInhibit === false)) {
-        that.log.warn('setting level to: %s', value)
-        that.targetLevel = value
-        that.delayed('set', 'LEVEL', value, that.delayOnSet)
-      } else {
-      // wait one second to resync data
+      // if obstruction has been detected
+      that.log.warn('setting level to: %s, observeInhibit: %s, inhibit:%s', value, typeof(that.observeInhibit), typeof(that.inhibit))
+      if ((that.observeInhibit === true) && (that.inhibit === true)) {
+        // wait one second to resync data
         that.log.warn('inhibit is true wait to resync')
         setTimeout(function () {
           that.queryData()
         }, 1000)
+      } else {
+        that.log.warn('setting level to: %s', value)
+        that.targetLevel = value
+        that.delayed('set', 'LEVEL', value, that.delayOnSet)
       }
-
       callback()
     })
 
@@ -113,8 +114,11 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   // only add if ObstructionDetected is used
   if (this.observeInhibit === true) {
     this.obstruction = blind.getCharacteristic(Characteristic.ObstructionDetected)
-      .on('get', function (callback) {
-        callback(null, that.inhibit)
+      .on('get', (callback) => {
+        // that.query('INHIBIT', (value) => {
+      this.log.warn('getting inhibit state!, %s', this.inhibit)
+      callback(null, this.inhibit)
+        // }
       })
     this.obstruction.eventEnabled = true
     this.platform.registerAdressForEventProcessingAtAccessory(this.adress + '.INHIBIT', this)
@@ -132,9 +136,10 @@ HomeMaticHomeKitBlindService.prototype.queryData = function (newValue) {
   this.remoteGetValue('LEVEL', () => {}) // trigger events
 
   if (this.observeInhibit === true) {
-    this.remoteGetValue('INHIBIT', function (newValue) {
-      // that.datapointEvent('1:INHIBIT', newValue)
-    })
+    this.remoteGetValue('INHIBIT', (newValue) => {
+      this.log.warn('REMOTE GET INHIBIT %s: %s', this.adress, newValue)
+      this.updateObstruction(JSON.parse(newValue)) // not sure why newValue (true/false) is currently a string? - but lets convert it if it is
+    }) // trigger events
   }
 }
 
@@ -156,9 +161,10 @@ HomeMaticHomeKitBlindService.prototype.setFinalBlindLevel = function (newValue) 
 
 HomeMaticHomeKitBlindService.prototype.datapointEvent = function (dp, newValue) {
   let that = this
-  this.log.warn('recieving event for %s: %s value: %s', this.adress, dp, newValue)
+  this.log.warn('recieving event for %s: %s value: %s (%s)', this.adress, dp, newValue, typeof(newValue))
 
   if (this.isDataPointEvent(dp, 'INHIBIT')) {
+    this.log.warn('RECEIVED INHIBIT for %s: %s value: %s', this.adress, dp, newValue)
     this.inhibit = newValue
     if (this.obstruction !== undefined) {
       this.obstruction.updateValue(newValue, null)
@@ -225,6 +231,18 @@ HomeMaticHomeKitBlindService.prototype.updateTargetPostion = function (value) {
     this.log.warn('updating target position!')
     this.targetPos.updateValue(value, null)
   }
+}
+
+HomeMaticHomeKitBlindService.prototype.updateObstruction = function (value) {
+  this.log.warn('set obstruction for %s to %s (%s)!', this.adress, value, typeof(value))
+  // if ((value == 'true') || (value == true)){
+  //   value = true
+  // } else {
+  //   value = false
+  // }
+  this.inhibit = value
+  this.obstruction.updateValue(value, null)
+
 }
 
 module.exports = HomeMaticHomeKitBlindService
