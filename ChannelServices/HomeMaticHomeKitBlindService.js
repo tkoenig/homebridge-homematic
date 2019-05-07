@@ -10,7 +10,6 @@ function HomeMaticHomeKitBlindService (log, platform, id, name, type, adress, sp
 util.inherits(HomeMaticHomeKitBlindService, HomeKitGenericService)
 
 HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, Characteristic) {
-  var that = this
   var blind = new Service.WindowCovering(this.name)
   this.delayOnSet = 750
   this.observeInhibit = this.getClazzConfigValue('observeInhibit', true)
@@ -20,7 +19,6 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   this.ignoreWorking = true
   this.currentLevel = 0
   this.targetLevel = undefined
-
 
   if (this.minValueForClose > 0) {
     this.log.debug('there is a custom closed level of %s', this.minValueForClose)
@@ -33,12 +31,12 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   this.services.push(blind)
 
   this.currentPos = blind.getCharacteristic(Characteristic.CurrentPosition)
-    .on('get', function (callback) {
-      that.query('LEVEL', function (value) {
-        if (value < that.minValueForClose) {
+    .on('get', (callback) => {
+      this.query('LEVEL', (value) => {
+        if (value < this.minValueForClose) {
           value = 0
         }
-        if (value > that.maxValueForOpen) {
+        if (value > this.maxValueForOpen) {
           value = 100
         }
         if (callback) callback(null, value)
@@ -48,37 +46,38 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   this.currentPos.eventEnabled = true
 
   this.targetPos = blind.getCharacteristic(Characteristic.TargetPosition)
-    .on('get', function (callback) {
-      that.query('LEVEL', function (value) {
+    .on('get', (callback) => {
+      this.query('LEVEL', (value) => {
         if (callback) {
-          if (value <= that.minValueForClose) {
+          if (value <= this.minValueForClose) {
             value = 0
           }
-          if (value >= that.maxValueForOpen) {
+          if (value >= this.maxValueForOpen) {
             value = 100
           }
           callback(null, value)
         }
       })
     })
-    .on('set', function (value, callback) {
+    .on('set', (value, callback) => {
       // if obstruction has been detected
-      if ((that.observeInhibit === true) && (that.inhibit === true)) {
+      if ((this.observeInhibit === true) && (this.inhibit === true)) {
         // wait one second to resync data
-        that.log.debug('inhibit is true wait to resync')
-        setTimeout(function () {
-          that.queryData()
+        this.log.debug('inhibit is true wait to resync')
+        setTimeout(() => {
+          this.queryData()
         }, 1000)
       } else {
-        that.targetLevel = value
-        that.delayed('set', 'LEVEL', value, that.delayOnSet)
+        this.targetLevel = value
+        this.eventupdate = false //whaat?
+        this.delayed('set', 'LEVEL', value, this.delayOnSet)
       }
       callback()
     })
 
   this.pstate = blind.getCharacteristic(Characteristic.PositionState)
-    .on('get', function (callback) {
-      that.query('DIRECTION', function (value) {
+    .on('get', (callback) => {
+      this.query('DIRECTION', (value) => {
         if (callback) {
           var result = 2
           if (value !== undefined) {
@@ -110,7 +109,6 @@ HomeMaticHomeKitBlindService.prototype.createDeviceService = function (Service, 
   if (this.observeInhibit === true) {
     this.obstruction = blind.getCharacteristic(Characteristic.ObstructionDetected)
       .on('get', (callback) => {
-        this.log.debug('getting inhibit state!, %s', this.inhibit)
         callback(null, this.inhibit)
       })
     this.obstruction.eventEnabled = true
