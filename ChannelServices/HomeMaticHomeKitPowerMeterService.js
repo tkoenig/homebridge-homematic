@@ -1,182 +1,139 @@
-'use strict';
+'use strict'
 
-var HomeKitGenericService = require('./HomeKitGenericService.js').HomeKitGenericService;
-var util = require("util");
-var moment = require('moment');
+var HomeKitGenericService = require('./HomeKitGenericService.js').HomeKitGenericService
+var util = require('util')
+var EveHomeKitTypes = require('./EveHomeKitTypes.js')
+let eve
 
-function HomeMaticHomeKitPowerMeterService(log,platform, id ,name, type ,adress,special, cfg, Service, Characteristic) {
-  HomeMaticHomeKitPowerMeterService.super_.apply(this, arguments);
+function HomeMaticHomeKitPowerMeterService (log, platform, id, name, type, adress, special, cfg, Service, Characteristic) {
+  HomeMaticHomeKitPowerMeterService.super_.apply(this, arguments)
 }
 
-util.inherits(HomeMaticHomeKitPowerMeterService, HomeKitGenericService);
+util.inherits(HomeMaticHomeKitPowerMeterService, HomeKitGenericService)
 
-
-HomeMaticHomeKitPowerMeterService.prototype.propagateServices = function(homebridge, Service, Characteristic) {
-
-  // Enable the Logging Service for Energy
-  this.enableLoggingService("energy");
-
-  // Register new Characteristic or Services here
-  var uuid = homebridge.uuid;
-
-
-  Characteristic.VoltageCharacteristic = function() {
-    var charUUID = uuid.generate('E863F10A-079E-48FF-8F27-9C2605A29F52');
-    Characteristic.call(this, 'Voltage', charUUID);
-    this.setProps({
-      format: Characteristic.Formats.UInt16,
-      unit: "V",
-      perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
-    });
-    this.value = this.getDefaultValue();
-  };
-
-  util.inherits(Characteristic.VoltageCharacteristic, Characteristic);
-
-
-  Characteristic.CurrentCharacteristic = function() {
-    var charUUID = uuid.generate('E863F126-079E-48FF-8F27-9C2605A29F52');
-    Characteristic.call(this, 'Current', charUUID);
-    this.setProps({
-      format: Characteristic.Formats.UInt16,
-      unit: "A",
-      perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
-    });
-    this.value = this.getDefaultValue();
-  };
-
-  util.inherits(Characteristic.CurrentCharacteristic, Characteristic);
-
-  Characteristic.PowerCharacteristic = function() {
-    var charUUID = uuid.generate('E863F10D-079E-48FF-8F27-9C2605A29F52');
-    Characteristic.call(this, 'Power', charUUID);
-    this.setProps({
-      format: Characteristic.Formats.UInt16,
-      unit: "W",
-      perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
-    });
-    this.value = this.getDefaultValue();
-  };
-
-  util.inherits(Characteristic.PowerCharacteristic, Characteristic);
-
-
-
-  Service.PowerMeterService = function(displayName, subtype) {
-    var servUUID = uuid.generate('E863F117-079E-48FF-8F27-9C2605A29F52');
-    Service.call(this, displayName, servUUID, subtype);
-    this.addCharacteristic(Characteristic.VoltageCharacteristic);
-    this.addCharacteristic(Characteristic.CurrentCharacteristic);
-    this.addCharacteristic(Characteristic.PowerCharacteristic);
-  };
-
-  util.inherits(Service.PowerMeterService, Service);
-}
-
-HomeMaticHomeKitPowerMeterService.prototype.shutdown = function() {
+HomeMaticHomeKitPowerMeterService.prototype.shutdown = function () {
   clearTimeout(this.refreshTimer)
 }
 
-HomeMaticHomeKitPowerMeterService.prototype.createDeviceService = function(Service, Characteristic) {
+HomeMaticHomeKitPowerMeterService.prototype.propagateServices = function (homebridge, Service, Characteristic) {
+  eve = new EveHomeKitTypes(homebridge)
+}
 
-  var that = this;
+HomeMaticHomeKitPowerMeterService.prototype.createDeviceService = function (Service, Characteristic) {
+  var that = this
+  this.enableLoggingService('energy')
+  var sensor = new eve.Service.PowerMeterService(this.name)
+  this.voltage = sensor.getCharacteristic(eve.Characteristic.Voltage)
+    .on('get', function (callback) {
+      that.query('2:VOLTAGE', function (value) {
+        if (callback) callback(null, that.round(value, 2))
+      })
+    })
 
-  var sensor = new Service["PowerMeterService"](this.name);
-  var voltage = sensor.getCharacteristic(Characteristic.VoltageCharacteristic)
-  .on('get', function(callback) {
-    that.query("2:VOLTAGE",function(value){
-      if (callback) callback(null,value);
-    });
-  }.bind(this));
+  this.voltage.eventEnabled = true
 
-  this.currentStateCharacteristic["2:VOLTAGE"] = voltage;
-  voltage.eventEnabled = true;
+  this.current = sensor.getCharacteristic(eve.Characteristic.ElectricCurrent)
+    .on('get', function (callback) {
+      that.query('2:CURRENT', function (value) {
+        if (value !== undefined) {
+          value = that.round((value / 1000), 2)
+          if (callback) callback(null, value)
+        } else {
+          if (callback) callback(null, 0)
+        }
+      })
+    })
 
-  var current = sensor.getCharacteristic(Characteristic.CurrentCharacteristic)
-  .on('get', function(callback) {
-    that.query("2:CURRENT",function(value){
-      if (value!=undefined) {
-        if (callback) callback(null,value);
-      } else {
-        if (callback) callback(null,0);
-      }
-    });
-  }.bind(this));
+  this.current.eventEnabled = true
 
-  this.currentStateCharacteristic["2:CURRENT"] = current;
-  current.eventEnabled = true;
+  this.power = sensor.getCharacteristic(eve.Characteristic.ElectricPower)
+    .on('get', function (callback) {
+      that.query('2:POWER', function (value) {
+        that.addLogEntry({ power: parseFloat(value) })
+        if (callback) callback(null, that.round(value, 4))
+      })
+    })
 
-  var power = sensor.getCharacteristic(Characteristic.PowerCharacteristic)
-  .on('get', function(callback) {
-    that.query("2:POWER",function(value){
-      that.addLogEntry({power:parseFloat(value)})
-      if (callback) callback(null,value);
-    });
-  }.bind(this));
+  this.power.eventEnabled = true
+  this.services.push(sensor)
 
-  this.currentStateCharacteristic["2:POWER"] = power;
-  power.eventEnabled = true;
-
-
-  this.services.push(sensor);
-
-  this.addValueFactor("CURRENT",0.001);
-
-  var outlet = new Service["Outlet"](this.name);
+  var outlet = new Service['Outlet'](this.name)
   outlet.getCharacteristic(Characteristic.OutletInUse)
-  .on('get', function(callback) {
-    if (callback) callback(null,1);
-  }.bind(this));
-
+    .on('get', function (callback) {
+      if (callback) callback(null, 1)
+    })
 
   var cc = outlet.getCharacteristic(Characteristic.On)
-  .on('get', function(callback) {
-    that.query("1:STATE",function(value){
-      that.log.debug("State is %s",value);
-      if (callback) callback(null,value);
-    });
-  }.bind(this))
+    .on('get', function (callback) {
+      that.query('1:STATE', function (value) {
+        that.log.debug('State is %s', value)
+        if (callback) callback(null, value)
+      })
+    })
 
-  .on('set', function(value, callback) {
-
-    if (that.readOnly==false) {
-      if (value==0) {
-        that.delayed("set","1:STATE" , false)
-      } else {
-        that.delayed("set","1:STATE" , true)
+    .on('set', function (value, callback) {
+      if (that.readOnly === false) {
+        if (value === 0) {
+          that.delayed('set', '1:STATE', false)
+        } else {
+          that.delayed('set', '1:STATE', true)
+        }
       }
-    }
-    callback();
-  }.bind(this));
+      callback()
+    })
 
-  this.currentStateCharacteristic["2:STATE"] = cc;
-  cc.eventEnabled = true;
+  this.setCurrentStateCharacteristic('1:STATE', cc)
 
-  this.addValueMapping("1:STATE",true,1);
-  this.addValueMapping("1:STATE",false,0);
+  this.powerConsumption = sensor.getCharacteristic(eve.Characteristic.TotalConsumption)
+    .on('get', function (callback) {
+      that.query(that.meterChannel + ':ENERGY_COUNTER', function (value) {
+        if (callback) callback(null, that.round((value / 1000), 4))
+      })
+    })
 
-  this.remoteGetValue("1:STATE");
+  this.powerConsumption.eventEnabled = true
 
-  this.services.push(outlet);
+  cc.eventEnabled = true
 
-  this.cadress = this.adress.replace(":2",":1");
-  this.queryData();
+  this.addValueMapping('1:STATE', true, 1)
+  this.addValueMapping('1:STATE', false, 0)
+
+  this.remoteGetValue('1:STATE')
+
+  this.services.push(outlet)
+
+  this.cadress = this.adress.replace(':2', ':1')
+
+  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + '.POWER', this, function (newValue) {
+    that.addLogEntry({ power: parseInt(newValue) })
+    that.power.updateValue(that.round(newValue, 2), null)
+  })
+
+  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + '.VOLTAGE', this, function (newValue) {
+    that.voltage.updateValue(that.round(newValue, 2), null)
+  })
+
+  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + '.CURRENT', this, function (newValue) {
+    that.current.updateValue(that.round((newValue / 1000), 2), null)
+  })
+
+  this.platform.registerAdressForEventProcessingAtAccessory(this.adress + '.ENERGY_COUNTER', this, function (newValue) {
+    that.powerConsumption.updateValue((that.round((newValue / 1000), 2)), null)
+  })
+
+  this.queryData()
 }
 
+HomeMaticHomeKitPowerMeterService.prototype.queryData = function () {
+  var that = this
 
-HomeMaticHomeKitPowerMeterService.prototype.queryData = function() {
-  var that = this;
-  this.query("2:POWER",function(value){
-    that.addLogEntry({power:parseFloat(value)})
-  });
-  //create timer to query device every 10 minutes
-  this.refreshTimer = setTimeout(function(){that.queryData()}, 10 * 60 * 1000);
+  let dps = ['2:POWER', '2:VOLTAGE', '2:CURRENT', '2:ENERGY_COUNTER']
+  dps.map(function (dp) {
+    that.remoteGetValue(dp)
+  })
+
+  // create timer to query device every 10 minutes
+  this.refreshTimer = setTimeout(function () { that.queryData() }, 10 * 60 * 1000)
 }
-if (this.loggingService != undefined) {
-HomeMaticHomeKitPowerMeterService.prototype.datapointEvent= function(dp,newValue) {
-  if (dp=='2:POWER') {
-    that.addLogEntry({power:parseFloat(value)})
-  }
-}
-}
-module.exports = HomeMaticHomeKitPowerMeterService;
+
+module.exports = HomeMaticHomeKitPowerMeterService
