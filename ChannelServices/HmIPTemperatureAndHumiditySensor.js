@@ -20,6 +20,7 @@ class HmIPTemperatureAndHumiditySensor extends HomeKitGenericService {
     this.humidityCharacteristic = humidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
     this.humidityCharacteristic
       .on('get', this.getHumidityState.bind(this))
+    this.services.push(humidity)
 
     this.enableLoggingService('weather')
     this.log.debug('Created new Temperature & Humidity Sensor service for %s: %s, : %s', this.name, this.deviceAdress, this.address)
