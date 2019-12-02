@@ -66,7 +66,7 @@ class HmIPTemperatureAndHumiditySensor extends HomeKitGenericService {
 
   set currentHumidityState (current) {
     if (this._currentHumidityState !== current) {
-      this.tempCharacteristic.updateValue(current)
+      this.humidityCharacteristic.updateValue(current)
     }
     this._currentHumidityState = current
   }
