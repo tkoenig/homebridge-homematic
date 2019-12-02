@@ -180,6 +180,7 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
   this.services.push(windspeed)
 
   this.cwindspeed = windspeed.getCharacteristic(Characteristic.WindSpeedCharacteristic)
+    .setProps({ minValue: 0.0, maxValue: 150.0, minStep: 1.0 })
     .on('get', function (callback) {
       this.query('WIND_SPEED', function (value) {
         if (callback) callback(null, value)
