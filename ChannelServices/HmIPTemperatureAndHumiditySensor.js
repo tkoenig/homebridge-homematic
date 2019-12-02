@@ -77,10 +77,10 @@ class HmIPTemperatureAndHumiditySensor extends HomeKitGenericService {
     }
 
     switch (dp) {
-      case 'ACTUAL_TEMPERATURE':
+      case 'ACTUAL_TEMPERATURE_STATUS':
         this.currentTemperatureState = JSON.parse(value)
         break
-      case 'HUMIDITY':
+      case 'HUMIDITY_STATUS':
         this.currentHumidityState = JSON.parse(value)
         break
       default:
