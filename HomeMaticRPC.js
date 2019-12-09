@@ -124,8 +124,9 @@ HomeMaticRPC.prototype.init = function () {
           callback(null, [])
         })
 
-        that.server.on('event', function (err, params, callback) {
-          that.log.warn('rpc <- event  on %s (%s): (%s)', that.interface, err, JSON.stringify(params))
+        that.server.on('event', function (_err, params, callback) {
+          // that.log.warn('rpc <- event  on %s (%s): (%s)', that.interface, _err, JSON.stringify(params))
+
           that.lastMessage = Math.floor((new Date()).getTime() / 1000)
           var channel = that.interface + params[1]
           var datapoint = params[2]
@@ -160,7 +161,7 @@ HomeMaticRPC.prototype.init = function () {
               events.map(function (event) {
                 if ((event['methodName'] === 'event') && (event['params'] !== undefined)) {
                   var params = event['params']
-                  that.log.warn('rpc <- event  on %s (%s): (%s)', that.interface, err, JSON.stringify(params))
+                  // that.log.warn('rpc <- event  on %s (%s): (%s)', that.interface, err, JSON.stringify(params))
                   var channel = that.interface + params[1]
                   var datapoint = params[2]
                   var value = params[3]
