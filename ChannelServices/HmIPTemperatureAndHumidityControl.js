@@ -110,6 +110,7 @@ class HmIPTemperatureAndHumidityControl {
   }
 
   getRemoteValue(channel, datapoint, callback) {
+    // RPC getValue (000E58A991F047:1 ACTUAL_TEMPERATURE) Response 21.9  | Errors: null
     this.platform.xmlrpchmip.client.methodCall('getValue', [channel, datapoint], (error, value) => {
       this.log.warn('RPC getValue (%s %s) Response %s  | Errors: %s', channel, datapoint, JSON.stringify(value), error)
       callback(value)
