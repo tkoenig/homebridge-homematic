@@ -15,8 +15,7 @@ class HmIPTemperatureAndHumidityControl {
     deviceType
   ) {
     Object.assign(this, { log, platform, id, name, type, address, special, cfg, service, characteristic, deviceType })
-    log.warn('platform: %(s)', platform)
-    log.warn('id: %(s)', id)
+    // log.warn('platform: %(s)', platform)
     log.warn('id: %(s)', id)
     log.warn('name: %(s)', name)
     log.warn('type: %(s)', type)
