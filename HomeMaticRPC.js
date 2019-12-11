@@ -4,7 +4,7 @@ const xmlrpc = require('homematic-xmlrpc')
 // const request = require('request')
 // const debug = require('debug')('HomeMaticRPC')
 const semver = require('semver')
-require('./homematicEventEmitter.js')
+require('./HomeMaticEventEmitter.js')
 
 var HomeMaticRPC = function (log, ccuip, port, system, platform) {
   this.log = log
