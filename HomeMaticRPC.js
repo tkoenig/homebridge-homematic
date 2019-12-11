@@ -4,6 +4,7 @@ const xmlrpc = require('homematic-xmlrpc')
 // const request = require('request')
 // const debug = require('debug')('HomeMaticRPC')
 const semver = require('semver')
+require('./homematicEventEmitter.js')
 
 var HomeMaticRPC = function (log, ccuip, port, system, platform) {
   this.log = log
@@ -125,7 +126,7 @@ HomeMaticRPC.prototype.init = function () {
         })
 
         that.server.on('event', function (_err, params, callback) {
-          // that.log.warn('rpc <- event  on %s (%s): (%s)', that.interface, _err, JSON.stringify(params))
+          that.log.warn('rpc <- event  on %s (%s): (%s)', that.interface, _err, JSON.stringify(params))
 
           that.lastMessage = Math.floor((new Date()).getTime() / 1000)
           var channel = that.interface + params[1]
@@ -161,7 +162,7 @@ HomeMaticRPC.prototype.init = function () {
               events.map(function (event) {
                 if ((event['methodName'] === 'event') && (event['params'] !== undefined)) {
                   var params = event['params']
-                  // that.log.warn('rpc <- event  on %s (%s): (%s)', that.interface, err, JSON.stringify(params))
+                  that.log.warn('rpc <- event  on %s (%s): (%s)', that.interface, err, JSON.stringify(params))
                   var channel = that.interface + params[1]
                   var datapoint = params[2]
                   var value = params[3]
