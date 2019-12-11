@@ -1,5 +1,4 @@
-import EventEmitter from 'events'
-
+const EventEmitter = require('events')
 class HomeMaticEventEmitter extends EventEmitter {
   constructor () {
     // the class constructor
