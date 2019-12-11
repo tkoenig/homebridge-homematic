@@ -1,20 +1,10 @@
 'use strict'
 
+let Service, Characteristic
+
 const homematicEvents = require('../HomeMaticEventEmitter.js')
 class HmIPTemperatureAndHumidityControl {
-  constructor (
-    log,
-    platform,
-    id,
-    name,
-    type,
-    address,
-    special,
-    cfg,
-    service,
-    characteristic,
-    deviceType
-  ) {
+  constructor (log, platform, id, name, type, address, special, cfg, service, characteristic, deviceType) {
     Object.assign(this, { log, platform, id, name, type, address, special, cfg, service, characteristic, deviceType })
     // log.warn('platform: %(s)', platform)
     // log.warn('id: %(s)', id)
@@ -25,9 +15,43 @@ class HmIPTemperatureAndHumidityControl {
     // log.warn('cfg: %(s)', cfg)
     // log.warn('characteristic: %(s)', characteristic)
     // log.warn('deviceType: %(s)', deviceType)
-    // adress = 'HmIP-RF.000E58A991F047:1'
-    let homematicId = address.match(/.+\.(.*):/)[1]
+    this.defaultChannel = this.address
 
+    this.setupServices()
+    this.setupEvents()
+  }
+
+  setupServices () {
+    this.services = []
+
+    var informationService = new Service.AccessoryInformation()
+
+    informationService
+      .setCharacteristic(Characteristic.Manufacturer, 'EQ-3')
+      .setCharacteristic(Characteristic.Model, this.type)
+      .setCharacteristic(Characteristic.Name, this.name)
+      .setCharacteristic(Characteristic.SerialNumber, this.address)
+    this.services.push(informationService)
+
+    // Temperature
+    var temp = new Service.TemperatureSensor(this.name)
+    this.tempCharacteristic = temp.getCharacteristic(Characteristic.CurrentTemperature)
+    this.tempCharacteristic
+      .on('get', this.getTemperatureState.bind(this))
+    this.services.push(temp)
+
+    // Humidity
+    var humidity = new Service.HumiditySensor(this.name)
+    this.humidityCharacteristic = humidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
+    this.humidityCharacteristic
+      .on('get', this.getHumidityState.bind(this))
+    this.services.push(humidity)
+
+  }
+
+  setupEvents () {
+    // this.address = 'HmIP-RF.000E58A991F047:1'
+    let homematicId = this.address.match(/.+\.(.*):/)[1] // returns 000E58A991F047
     homematicEvents.on(homematicId + ':0', (data) => { this.handleEvent(data) })
     homematicEvents.on(homematicId + ':1', (data) => { this.handleEvent(data) })
   }
@@ -36,14 +60,75 @@ class HmIPTemperatureAndHumidityControl {
     this.log.warn('received data:', data)
   }
 
-  // Used in HomeMaticChannelLoader:91..
-  setReadOnly (_read) { }
-  // this will only be added to foundAccesories if > 1
-  getServices () {
-    return []
+  getTemperatureState (callback) {
+    callback(null, this.currentTemperatureState)
   }
-  set serviceClassName (_name) {}
 
+  getHumidityState (callback) {
+    callback(null, this.currentHumidityState)
+  }
+
+  get currentTemperatureState () {
+    if (this._currentTemperatureState !== undefined) {
+      return this._currentTemperatureState
+    }
+    // no value found - get remote value
+    this.getRemoteValue(this.defaultChannel, 'ACTUAL_TEMPERATURE', (value) => {
+      this.currentTemperatureState = JSON.parse(value)
+    })
+
+    return this._currentTemperatureState
+  }
+
+  set currentTemperatureState (current) {
+    if (this._currentTemperatureState !== current) {
+      this.tempCharacteristic.updateValue(current)
+    }
+    this._currentTemperatureState = current
+  }
+
+  get currentHumidityState () {
+    if (this._currentHumidityState !== undefined) {
+      return this._currentHumidityState
+    }
+    // no value found - get remote value
+    this.getRemoteValue(this.defaultChannel, 'HUMIDITY', (value) => {
+      this.currentHumidityState = JSON.parse(value)
+    })
+
+    return this._currentHumidityState
+  }
+
+
+  set currentHumidityState (current) {
+    if (this._currentHumidityState !== current) {
+      this.humidityCharacteristic.updateValue(current)
+    }
+    this._currentHumidityState = current
+  }
+
+  getRemoteValue(channel, datapoint, callback) {
+    this.platform.xmlrpchmip.client.methodCall('getValue', [channel, datapoint], (error, value) => {
+      this.log.warn('RPC getValue (%s %s) Response %s  | Errors: %s', channel, datapoint, JSON.stringify(value), error)
+      callback(value)
+    })
+  }
+
+  /*
+     * The getServices function is called by Homebridge and should return an array of Services this accessory is exposing.
+     * It is also where we bootstrap the plugin to tell Homebridge which function to use for which action.
+     */
+  getServices () {
+    return this.services
+  }
+
+  // Somewhere used ....
+  // Used in HomeMaticChannelLoader:91..
+  // eslint-disable-next-line no-unused-vars
+  setReadOnly (_read) { }
+
+  set serviceClassName (_name) {}
+  // eslint-disable-next-line no-unused-vars
   event (address, dp, value) { }
 }
 
