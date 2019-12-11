@@ -76,7 +76,7 @@ HomeMaticChannelLoader.prototype.loadChannelService = function (list, deviceType
       // Replace Chars in name https://github.com/thkl/homebridge-homematic/issues/56
 
       name = name.replace(/[.:#_()-]/g, ' ')
-      that.log.debug('service for %s:%s is %s', deviceType, channelType, serviceclass)
+      that.log.warn('service for %s:%s is %s', deviceType, channelType, serviceclass)
 
       let cfgOptions = this.getConfigOptions(deviceType + ':' + channelType)
       if (cfgOptions !== undefined) {
