@@ -13,7 +13,8 @@ class HmIPTemperatureAndHumidityControl {
     // log.warn('cfg: %(s)', cfg)
     // log.warn('characteristic: %(s)', characteristic)
     // log.warn('deviceType: %(s)', deviceType)
-    this.defaultChannel = this.address
+    // this.address = 'HmIP-RF.000E58A991F047:1'
+    this.defaultChannel = this.address.match(/.+\.(.*)/)[1] // returns 000E58A991F047:1
     // Service and Characteristic are from hap-nodejs
     // Service = homebridge.hap.Service;
     // Characteristic = homebridge.hap.Characteristic;
