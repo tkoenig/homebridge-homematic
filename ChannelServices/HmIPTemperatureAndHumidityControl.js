@@ -28,8 +28,10 @@ class HmIPTemperatureAndHumidityControl {
     // adress = 'HmIP-RF.000E58A991F047:1'
     let homematicId = address.match(/.+\.(.*):/)[1]
 
-    homematicEvents.on(homematicId + ':0', this.handleEvent)
-    homematicEvents.on(homematicId + ':1', this.handleEvent)
+    homematicEvents.on(homematicId + ':0', (data) => {
+      this.handleEvent(data)
+    })
+    homematicEvents.on(homematicId + ':1', (data) => { this.handleEvent(data) })
   }
 
   handleEvent (data) {
