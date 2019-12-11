@@ -14,4 +14,4 @@ const homematicEvents = new HomeMaticEventEmitter()
 // prevents new properties from being added to the object
 Object.freeze(homematicEvents)
 
-export default homematicEvents
+module.exports = homematicEvents
