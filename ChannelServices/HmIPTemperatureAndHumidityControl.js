@@ -59,7 +59,19 @@ class HmIPTemperatureAndHumidityControl {
   }
 
   handleEvent (data) {
-    this.log.warn('received data:', data)
+    const { datapoint, value } = data
+    switch (datapoint) {
+    case 'ACTUAL_TEMPERATURE':
+      this.currentTemperatureState = JSON.parse(value)
+      break
+    case 'HUMIDITY':
+      this.currentHumidityState = JSON.parse(value)
+      break
+    default:
+      this.log.warn('received unhandled event: %s with value %s', datapoint, value)
+      break
+    }
+
   }
 
   getTemperatureState (callback) {
