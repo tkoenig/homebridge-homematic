@@ -39,14 +39,14 @@ class HmIPTemperatureAndHumidityControl {
     var temp = new Service.TemperatureSensor(this.name)
     this.tempCharacteristic = temp.getCharacteristic(Characteristic.CurrentTemperature)
     this.tempCharacteristic
-      .on('get', this.getTemperatureState.bind(this))
+      .on('get', (callback) => { callback(null, this.currentTemperatureState) } )
     this.services.push(temp)
 
     // Humidity
     var humidity = new Service.HumiditySensor(this.name)
     this.humidityCharacteristic = humidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
     this.humidityCharacteristic
-      .on('get', this.getHumidityState.bind(this))
+      .on('get', (callback) => { callback(null, this.currentHumidityState) })
     this.services.push(humidity)
 
   }
@@ -72,14 +72,6 @@ class HmIPTemperatureAndHumidityControl {
       break
     }
 
-  }
-
-  getTemperatureState (callback) {
-    callback(null, this.currentTemperatureState)
-  }
-
-  getHumidityState (callback) {
-    callback(null, this.currentHumidityState)
   }
 
   get currentTemperatureState () {
