@@ -1,11 +1,9 @@
 'use strict'
 
-let Service, Characteristic
-
 const homematicEvents = require('../HomeMaticEventEmitter.js')
 class HmIPTemperatureAndHumidityControl {
-  constructor (log, platform, id, name, type, address, special, cfg, service, characteristic, deviceType) {
-    Object.assign(this, { log, platform, id, name, type, address, special, cfg, service, characteristic, deviceType })
+  constructor (log, platform, id, name, type, address, special, cfg, Service, Characteristic, deviceType) {
+    Object.assign(this, { log, platform, id, name, type, address, special, cfg, deviceType })
     // log.warn('platform: %(s)', platform)
     // log.warn('id: %(s)', id)
     // log.warn('name: %(s)', name)
@@ -16,12 +14,15 @@ class HmIPTemperatureAndHumidityControl {
     // log.warn('characteristic: %(s)', characteristic)
     // log.warn('deviceType: %(s)', deviceType)
     this.defaultChannel = this.address
+    // Service and Characteristic are from hap-nodejs
+    // Service = homebridge.hap.Service;
+    // Characteristic = homebridge.hap.Characteristic;
 
-    this.setupServices()
+    this.setupServices(Service, Characteristic)
     this.setupEvents()
   }
 
-  setupServices () {
+  setupServices (Service, Characteristic) {
     this.services = []
 
     var informationService = new Service.AccessoryInformation()
