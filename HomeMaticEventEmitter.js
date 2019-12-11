@@ -1,13 +1,5 @@
 const EventEmitter = require('events')
-class HomeMaticEventEmitter extends EventEmitter {
-  constructor () {
-    // the class constructor
-    if (!HomeMaticEventEmitter.instance) {
-      HomeMaticEventEmitter.instance = this
-    }
-    return HomeMaticEventEmitter.instance
-  }
-}
+class HomeMaticEventEmitter extends EventEmitter {}
 
 const homematicEvents = new HomeMaticEventEmitter()
 
