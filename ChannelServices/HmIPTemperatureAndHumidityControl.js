@@ -59,7 +59,6 @@ class HmIPTemperatureAndHumidityControl {
   }
 
   handleEvent (data) {
-    this.log.warn('received data:', data)
     const { dataPoint, value } = data
     switch (dataPoint) {
     case 'ACTUAL_TEMPERATURE':
