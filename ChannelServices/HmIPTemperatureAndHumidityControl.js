@@ -107,8 +107,16 @@ class HmIPTemperatureAndHumidityControl {
       //Target temperature
       this.currentHeatingCoolingState = (value < 5) ? 0 : 1
       this.targetTemperatureState = value
-
       break
+    case 'SET_POINT_MODE':
+      if (value == 0) { // Set to automatic
+        this.targetHeatingCoolingState = 3
+      } else { // Set on or off depending on current temperature
+        // if the temperature is set below 5, show that it is turned off.
+        this.targetHeatingCoolingState = (this.targetTemperatureState < 5) ? 0 : 1
+      }
+      break
+
     default:
       this.log.warn('received unhandled event: %s with value %s', dataPoint, JSON.parse(value))
       break
