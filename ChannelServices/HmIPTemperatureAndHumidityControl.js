@@ -237,9 +237,18 @@ class HmIPTemperatureAndHumidityControl {
     if (value == 3) {
       this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 0, callback)
     }
-    else {
+    else if(value == 2) { // COOLING = OFF
+      this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 1)
+      this.setRemoteValue(this.defaultChannel, 'SET_POINT_TEMPERATURE', 4.5, callback)
+    }
+    else if(value == 1) { // HEATING
       this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 1, callback)
     }
+    else { // OFF
+      this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 1, callback)
+      this.setRemoteValue(this.defaultChannel, 'SET_POINT_TEMPERATURE', 4.5, callback)
+    }
+
   }
 
   // Set the target temperature
@@ -260,7 +269,7 @@ class HmIPTemperatureAndHumidityControl {
     // RPC getValue (000E58A991F047:1 ACTUAL_TEMPERATURE) Response 21.9  | Errors: null
     this.platform.xmlrpchmip.client.methodCall('setValue', [channel, dataPoint, value], (error, response) => {
       this.log.warn('RPC setValue (%s %s) value %s  | Errors: %s | Response: %s', channel, dataPoint, value, error, JSON.stringify(response))
-      callback()
+      if (callback) callback()
     })
   }
 
