@@ -69,6 +69,12 @@ class HmIPTemperatureAndHumidityControl {
         this.setTargetTemperature(value, callback)
       })
 
+    thermo.getCharacteristic(Characteristic.TemperatureDisplayUnits)
+      .on('get', (callback) => {
+        callback(null, Characteristic.TemperatureDisplayUnits.CELSIUS)
+      })
+
+
     this.currentHumidity = thermo.getCharacteristic(Characteristic.CurrentRelativeHumidity)
     this.currentHumidity
       .on('get', (callback) => { callback(null, this.currentHumidityState) })
