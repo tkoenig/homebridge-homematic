@@ -245,7 +245,7 @@ class HmIPTemperatureAndHumidityControl {
       this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 1, callback)
     }
     else { // OFF
-      this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 1, callback)
+      this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 1)
       this.setRemoteValue(this.defaultChannel, 'SET_POINT_TEMPERATURE', 4.5, callback)
     }
 
