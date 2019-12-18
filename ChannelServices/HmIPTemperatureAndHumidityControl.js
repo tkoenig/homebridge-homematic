@@ -235,17 +235,17 @@ class HmIPTemperatureAndHumidityControl {
   // Set the target heating mode - HOmematic only knows about AUTO or NO AUTO
   setTargetHeatingCooling (value, callback) {
     if (value == 3) {
-      this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 0, callback)
+      this.setRemoteValue(this.defaultChannel, 'CONTROL_MODE', 0, callback)
     }
     else if(value == 2) { // COOLING = OFF
-      this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 1)
+      this.setRemoteValue(this.defaultChannel, 'CONTROL_MODE', 1)
       this.setRemoteValue(this.defaultChannel, 'SET_POINT_TEMPERATURE', 4.5, callback)
     }
     else if(value == 1) { // HEATING
-      this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 1, callback)
+      this.setRemoteValue(this.defaultChannel, 'CONTROL_MODE', 1, callback)
     }
     else { // OFF
-      this.setRemoteValue(this.defaultChannel, 'SET_POINT_MODE', 1)
+      this.setRemoteValue(this.defaultChannel, 'CONTROL_MODE', 1)
       this.setRemoteValue(this.defaultChannel, 'SET_POINT_TEMPERATURE', 4.5, callback)
     }
 
