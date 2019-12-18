@@ -95,7 +95,7 @@ class HmIPTemperatureAndHumidityControl {
   handleEvent (data) {
     let { dataPoint, value } = data
     value = JSON.parse(value)
-
+    this.log.warn('received event: %s with value %s (%s)', dataPoint, value, typeof(value))
     switch (dataPoint) {
     case 'ACTUAL_TEMPERATURE':
       this.currentTemperatureState = value
@@ -118,7 +118,6 @@ class HmIPTemperatureAndHumidityControl {
       break
 
     default:
-      this.log.warn('received unhandled event: %s with value %s', dataPoint, JSON.parse(value))
       break
     }
 
