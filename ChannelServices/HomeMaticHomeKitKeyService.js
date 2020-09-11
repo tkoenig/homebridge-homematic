@@ -10,9 +10,6 @@ class HomeMaticHomeKitKeyService extends HomeKitGenericService {
 
     var service = new Service.StatelessProgrammableSwitch(this.name)
     var cc = this.programmableSwitchCharacteristic = service.getCharacteristic(Characteristic.ProgrammableSwitchEvent)
-
-    // this.currentStateCharacteristic['PRESS_SHORT'] = cc
-    // this.currentStateCharacteristic['PRESS_LONG'] = cc
     this.log.debug('Creating new HomekitKey service for %s: %s, : %s', this.name, this.deviceAdress, this.address)
     this.services.push(service)
   }
@@ -22,10 +19,6 @@ class HomeMaticHomeKitKeyService extends HomeKitGenericService {
       return // skip not related events...
     }
 
-    if (dp === 'STATE') {
-      this.currentState = value
-    }
-    this.log.warn('received  event: %s with value %s', dp, value)
     switch (dp) {
       case 'PRESS_SHORT':
         this.programmableSwitchCharacteristic.updateValue(0)
@@ -35,7 +28,6 @@ class HomeMaticHomeKitKeyService extends HomeKitGenericService {
         break;
 
       default:
-        this.log.warn('received unhandled event: %s with value %s', dp, value)
         break;
     }
   }
