@@ -1,20 +1,43 @@
 'use strict'
 
-var HomeKitGenericService = require('./HomeKitGenericService.js').HomeKitGenericService
-var util = require('util')
+const HomeKitGenericService = require('./HomeKitGenericService.js').HomeKitGenericService
 
-function HomeMaticHomeKitKeyService (log, platform, id, name, type, adress, special, cfg, Service, Characteristic) {
-  HomeMaticHomeKitKeyService.super_.apply(this, arguments)
-}
+class HomeMaticHomeKitKeyService extends HomeKitGenericService {
+  createDeviceService(Service, Characteristic) {
+    this.ignoreWorking = true
+    this.address = this.adress // fix spelling
 
-util.inherits(HomeMaticHomeKitKeyService, HomeKitGenericService)
+    var service = new Service.StatelessProgrammableSwitch(this.name)
+    this.programmableSwitchCharacteristic = service.getCharacteristic(
+      Characteristic.ProgrammableSwitchEvent
+    )
+    this.log.debug(
+      'Creating new HomekitKey service for %s: %s, : %s',
+      this.name,
+      this.deviceAdress,
+      this.address
+    )
+    this.services.push(service)
+  }
 
-HomeMaticHomeKitKeyService.prototype.createDeviceService = function (Service, Characteristic) {
-  var key = new Service.StatelessProgrammableSwitch(this.name)
-  var cc = key.getCharacteristic(Characteristic.ProgrammableSwitchEvent)
-  this.currentStateCharacteristic['PRESS_SHORT'] = cc
-  this.currentStateCharacteristic['PRESS_LONG'] = cc
-  this.services.push(key)
+  event(address, dp, value) {
+    if (this.address !== address) {
+      return // skip not related events...
+    }
+    switch (dp) {
+      case 'PRESS_SHORT':
+        this.programmableSwitchCharacteristic.updateValue(0)
+        break
+      case 'PRESS_LONG':
+        this.programmableSwitchCharacteristic.updateValue(2)
+        break
+
+      default:
+        // if you only receive an event INSTALL_TEST you need to disable security (Übertragungsmodus: Gesichert)
+        //this.log.warn('received unhandled event: %s with value %s', dp, value)
+        break
+    }
+  }
 }
 
 module.exports = HomeMaticHomeKitKeyService

@@ -4,6 +4,7 @@ const xmlrpc = require('homematic-xmlrpc')
 // const request = require('request')
 // const debug = require('debug')('HomeMaticRPC')
 const semver = require('semver')
+const homematicEvents = require('./HomeMaticEventEmitter.js')
 
 var HomeMaticRPC = function (log, ccuip, port, system, platform) {
   this.log = log
@@ -124,13 +125,16 @@ HomeMaticRPC.prototype.init = function () {
           callback(null, [])
         })
 
-        that.server.on('event', function (err, params, callback) {
-          that.log.debug('rpc <- event  on %s (%s)', that.interface, err)
+        that.server.on('event', function (_err, params, callback) {
+          // that.log.warn('rpc <- event  on %s (%s): (%s)', that.interface, _err, JSON.stringify(params))
+
           that.lastMessage = Math.floor((new Date()).getTime() / 1000)
           var channel = that.interface + params[1]
+          var instance = params[1]
           var datapoint = params[2]
           var value = params[3]
           let address = that.interface + params[1] + '.' + params[2]
+          homematicEvents.emit(instance, { dataPoint: datapoint, value: value })
 
           that.log.debug('RPC single event for %s %s with value %s', channel, datapoint, value)
 
@@ -160,11 +164,13 @@ HomeMaticRPC.prototype.init = function () {
               events.map(function (event) {
                 if ((event['methodName'] === 'event') && (event['params'] !== undefined)) {
                   var params = event['params']
+                  // that.log.warn('rpc <- event  on %s (%s): (%s)', that.interface, err, JSON.stringify(params))
                   var channel = that.interface + params[1]
+                  var instance = params[1]
                   var datapoint = params[2]
                   var value = params[3]
                   let address = that.interface + params[1] + '.' + params[2]
-
+                  homematicEvents.emit(instance, { dataPoint: datapoint, value: value })
                   that.log.debug('RPC event for %s %s with value %s', channel, datapoint, value)
 
                   that.platform.foundAccessories.map(function (accessory) {
@@ -226,7 +232,7 @@ HomeMaticRPC.prototype.getValue = function (channel, datapoint, callback) {
   if (channel.indexOf(that.interface) > -1) {
     channel = channel.substr(that.interface.length)
 
-    this.log.debug('RPC getValue Call for %s %s', channel, datapoint)
+    // this.log.warn('RPC getValue Call for %s %s', channel, datapoint)
     this.client.methodCall('getValue', [channel, datapoint], function (error, value) {
       that.log.debug('RPC getValue (%s %s) Response %s  | Errors: %s', channel, datapoint, JSON.stringify(value), error)
       callback(value)
