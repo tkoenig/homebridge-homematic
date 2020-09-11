@@ -1,37 +1,43 @@
 'use strict'
 
-const HomeKitGenericService = require('./HomeKitGenericService.js')
-  .HomeKitGenericService
+const HomeKitGenericService = require('./HomeKitGenericService.js').HomeKitGenericService
 
 class HomeMaticHomeKitKeyService extends HomeKitGenericService {
-  createDeviceService (Service, Characteristic) {
+  createDeviceService(Service, Characteristic) {
     this.ignoreWorking = true
     this.address = this.adress // fix spelling
 
     var service = new Service.StatelessProgrammableSwitch(this.name)
-    var cc = this.programmableSwitchCharacteristic = service.getCharacteristic(Characteristic.ProgrammableSwitchEvent)
-    this.log.debug('Creating new HomekitKey service for %s: %s, : %s', this.name, this.deviceAdress, this.address)
+    this.programmableSwitchCharacteristic = service.getCharacteristic(
+      Characteristic.ProgrammableSwitchEvent
+    )
+    this.log.debug(
+      'Creating new HomekitKey service for %s: %s, : %s',
+      this.name,
+      this.deviceAdress,
+      this.address
+    )
     this.services.push(service)
   }
 
-  event (address, dp, value) {
+  event(address, dp, value) {
     if (this.address !== address) {
       return // skip not related events...
     }
-
     switch (dp) {
       case 'PRESS_SHORT':
         this.programmableSwitchCharacteristic.updateValue(0)
-        break;
+        break
       case 'PRESS_LONG':
         this.programmableSwitchCharacteristic.updateValue(2)
-        break;
+        break
 
       default:
-        break;
+        // if you only receive an event INSTALL_TEST you need to disable security (Übertragungsmodus: Gesichert)
+        //this.log.warn('received unhandled event: %s with value %s', dp, value)
+        break
     }
   }
 }
 
 module.exports = HomeMaticHomeKitKeyService
-
