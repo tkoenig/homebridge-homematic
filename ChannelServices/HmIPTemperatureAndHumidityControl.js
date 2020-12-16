@@ -49,9 +49,13 @@ class HmIPTemperatureAndHumidityControl {
     // Thermostat
     var thermo = new Service.Thermostat(this.name)
     this.currentHeatingCooling = thermo.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
+
+
     this.currentHeatingCooling
       .on('get', (callback) => { callback(null, this.currentHeatingCoolingState) })
     this.targetHeatingCooling = thermo.getCharacteristic(Characteristic.TargetHeatingCoolingState)
+    // Enable Heatonly mode
+    this.targetHeatingCooling.setProps({ maxValue: Characteristic.TargetHeatingCoolingState.HEAT })
     this.targetHeatingCooling
       .on('get', (callback) => { callback(null, this.targetHeatingCoolingState) })
       .on('set', (value, callback) => {
@@ -110,7 +114,7 @@ class HmIPTemperatureAndHumidityControl {
       break
     case 'SET_POINT_MODE':
       if (value == 0) { // Set to automatic
-        this.targetHeatingCoolingState = 3
+        this.targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.HEAT
       } else { // Set on or off depending on current temperature
         // if the temperature is set below 5, show that it is turned off.
         this.targetHeatingCoolingState = (this.targetTemperatureState < 5) ? 0 : 1
@@ -212,11 +216,10 @@ class HmIPTemperatureAndHumidityControl {
     // no value found - get remote value
     // Homematic does not know about ON or OFF, SET_POINT_MODE 0 = AUTO, 1 = MANUAL
     this.getRemoteValue(this.defaultChannel, 'SET_POINT_MODE', (automatic) => {
-      if (automatic == 0) { // Set to automatic
-        this.targetHeatingCoolingState = 3
+      if (automatic == 0 || (this.targetTemperatureState > 5)) { // Set to HEAT // if the temperature is set below 5, show that it is turned off.
+        this.targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.HEAT
       } else { // Set on or off depending on current temperature
-        // if the temperature is set below 5, show that it is turned off.
-        this.targetHeatingCoolingState = (this.targetTemperatureState < 5) ? 0 : 1
+        this.targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.OFF
       }
     })
 
@@ -233,17 +236,9 @@ class HmIPTemperatureAndHumidityControl {
 
   // Set the target heating mode - HOmematic only knows about AUTO or NO AUTO
   setTargetHeatingCooling (value, callback) {
-    if (value == 3) {
+    if(value == 1) { // HEATING
       this.setRemoteValue(this.defaultChannel, 'CONTROL_MODE', 0, callback)
-    }
-    else if(value == 2) { // COOLING = OFF
-      this.setRemoteValue(this.defaultChannel, 'CONTROL_MODE', 1)
-      this.setRemoteValue(this.defaultChannel, 'SET_POINT_TEMPERATURE', 4.5, callback)
-    }
-    else if(value == 1) { // HEATING
-      this.setRemoteValue(this.defaultChannel, 'CONTROL_MODE', 1, callback)
-    }
-    else { // OFF
+    } else { // OFF
       this.setRemoteValue(this.defaultChannel, 'CONTROL_MODE', 1)
       this.setRemoteValue(this.defaultChannel, 'SET_POINT_TEMPERATURE', 4.5, callback)
     }
