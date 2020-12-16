@@ -114,7 +114,7 @@ class HmIPTemperatureAndHumidityControl {
       break
     case 'SET_POINT_MODE':
       if (value == 0) { // Set to automatic
-        this.targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.HEAT
+        this.targetHeatingCoolingState = 1; //Characteristic.TargetHeatingCoolingState.HEAT
       } else { // Set on or off depending on current temperature
         // if the temperature is set below 5, show that it is turned off.
         this.targetHeatingCoolingState = (this.targetTemperatureState < 5) ? 0 : 1
@@ -217,9 +217,9 @@ class HmIPTemperatureAndHumidityControl {
     // Homematic does not know about ON or OFF, SET_POINT_MODE 0 = AUTO, 1 = MANUAL
     this.getRemoteValue(this.defaultChannel, 'SET_POINT_MODE', (automatic) => {
       if (automatic == 0 || (this.targetTemperatureState > 5)) { // Set to HEAT // if the temperature is set below 5, show that it is turned off.
-        this.targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.HEAT
+        this.targetHeatingCoolingState = 1; //Characteristic.TargetHeatingCoolingState.HEAT
       } else { // Set on or off depending on current temperature
-        this.targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.OFF
+        this.targetHeatingCoolingState = 0; //Characteristic.TargetHeatingCoolingState.OFF
       }
     })
 
