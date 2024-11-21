@@ -155,10 +155,15 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
 
   this.cbright = brightness.getCharacteristic(Characteristic.CurrentAmbientLightLevel)
     .on('get', function (callback) {
+      // Call the callback immediately to avoid timeout
+      callback(null, this.getDefaultValue()); // Return a default value or the last known value
+
+      // Perform the query asynchronously
       that.query('ILLUMINATION', function (value) {
-        if (callback) callback(null, value)
-      })
-    })
+        // Update the characteristic value once the query is complete
+        this.cbright.updateValue(value); // Update the characteristic with the new value
+      }.bind(this)); // Bind 'this' to maintain context
+    }.bind(this));
 
   this.setCurrentStateCharacteristic('ILLUMINATION', this.cbright)
   this.cbright.eventEnabled = true
@@ -168,10 +173,15 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
 
   this.csunshineduration = sunshineduration.getCharacteristic(Characteristic.SunshineCharacteristic)
     .on('get', function (callback) {
+      // Call the callback immediately to avoid timeout
+      callback(null, this.getDefaultValue()); // Return a default value or the last known value
+
+      // Perform the query asynchronously
       this.query('SUNSHINEDURATION', function (value) {
-        if (callback) callback(null, value)
-      })
-    }.bind(this))
+        // Update the characteristic value once the query is complete
+        this.csunshineduration.updateValue(value); // Update the characteristic with the new value
+      }.bind(this)); // Bind 'this' to maintain context
+    }.bind(this));
 
   this.setCurrentStateCharacteristic('SUNSHINEDURATION', this.csunshineduration)
   this.csunshineduration.eventEnabled = true
