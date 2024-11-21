@@ -130,11 +130,7 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
     .setProps({ minValue: -100 })
     .on('get', function (callback) {
       that.query('ACTUAL_TEMPERATURE', function (value) {
-        if (value !== undefined) {
-          callback(null, value);
-        } else {
-          callback();
-        }
+        if (callback) callback(null, value)
       })
     })
 
@@ -147,11 +143,7 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
   this.chum = humidity.getCharacteristic(Characteristic.CurrentRelativeHumidity)
     .on('get', function (callback) {
       that.query('HUMIDITY', function (value) {
-        if (value !== undefined) {
-          callback(null, value);
-        } else {
-          callback();
-        }
+        if (callback) callback(null, value)
       })
     })
 
@@ -164,11 +156,7 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
   this.cbright = brightness.getCharacteristic(Characteristic.CurrentAmbientLightLevel)
     .on('get', function (callback) {
       that.query('ILLUMINATION', function (value) {
-        if (value !== undefined) {
-          callback(null, value);
-        } else {
-          callback();
-        }
+        if (callback) callback(null, value)
       })
     })
 
@@ -181,12 +169,8 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
   this.csunshineduration = sunshineduration.getCharacteristic(Characteristic.SunshineCharacteristic)
     .on('get', function (callback) {
       this.query('SUNSHINEDURATION', function (value) {
-        if (value !== undefined) {
-          callback(null, value);
-        } else {
-          callback();
-        }
-      });
+        if (callback) callback(null, value)
+      })
     }.bind(this))
 
   this.setCurrentStateCharacteristic('SUNSHINEDURATION', this.csunshineduration)
@@ -199,12 +183,8 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
     .setProps({ minValue: 0.0, maxValue: 150.0, minStep: 1.0 })
     .on('get', function (callback) {
       this.query('WIND_SPEED', function (value) {
-        if (value !== undefined) {
-          callback(null, value);
-        } else {
-          callback();
-        }
-      });
+        if (callback) callback(null, value)
+      })
     }.bind(this))
 
   this.setCurrentStateCharacteristic('WIND_SPEED', this.cwindspeed)
@@ -231,11 +211,7 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
     this.craincount = raincount.getCharacteristic(Characteristic.RainCountCharacteristic)
       .on('get', function (callback) {
         this.query('RAIN_COUNTER', function (value) {
-          if (value !== undefined) {
-            callback(null, value);
-          } else {
-            callback();
-          }
+          if (callback) callback(null, value)
         })
       }.bind(this))
 
@@ -251,11 +227,7 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
     this.cwinddirection = winddirection.getCharacteristic(Characteristic.WindDirectionCharacteristic)
       .on('get', function (callback) {
         this.query('WIND_DIR', function (value) {
-          if (value !== undefined) {
-            callback(null, value);
-          } else {
-            callback();
-          }
+          if (callback) callback(null, value)
         })
       }.bind(this))
 
@@ -268,11 +240,7 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
     this.cwindrange = windrange.getCharacteristic(Characteristic.WindRangeCharacteristic)
       .on('get', function (callback) {
         this.query('WIND_DIR_RANGE', function (value) {
-          if (value !== undefined) {
-            callback(null, value);
-          } else {
-            callback();
-          }
+          if (callback) callback(null, value)
         })
       }.bind(this))
 
