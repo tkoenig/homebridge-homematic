@@ -85,8 +85,9 @@ class HmIPTemperatureAndHumiditySensor extends HomeKitGenericService {
       this.currentHumidityState = JSON.parse(value)
       break
     default:
-      this.log.warn('received unhandled event: %s with value %s', dp, value)
-      break
+      // this.log.warn('received unhandled event: %s with value %s', dp, value)
+      return
+      
     }
     this.addLogEntry({ temp: this.currentTemperatureState, pressure: 0, humidity: this.currentHumidityState })
   }
