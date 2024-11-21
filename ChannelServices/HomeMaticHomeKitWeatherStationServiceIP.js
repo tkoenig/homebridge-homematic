@@ -156,7 +156,7 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
   this.cbright = brightness.getCharacteristic(Characteristic.CurrentAmbientLightLevel)
     .on('get', function (callback) {
       // Call the callback immediately to avoid timeout
-      callback(null, this.getDefaultValue()); // Return a default value or the last known value
+      callback(); // Return a default value or the last known value
 
       // Perform the query asynchronously
       that.query('ILLUMINATION', function (value) {
@@ -174,7 +174,7 @@ HomeMaticHomeKitWeatherStationServiceIP.prototype.createDeviceService = function
   this.csunshineduration = sunshineduration.getCharacteristic(Characteristic.SunshineCharacteristic)
     .on('get', function (callback) {
       // Call the callback immediately to avoid timeout
-      callback(null, this.getDefaultValue()); // Return a default value or the last known value
+      callback(); // Return a default value or the last known value
 
       // Perform the query asynchronously
       this.query('SUNSHINEDURATION', function (value) {
