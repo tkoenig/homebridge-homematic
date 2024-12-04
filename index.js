@@ -248,6 +248,9 @@ HomeMaticPlatform.prototype.accessories = function (callback) {
 }
 
 HomeMaticPlatform.prototype.checkUpdate = function () {
+  // Dont check for updates currently
+  return;
+
   // Version Check and autoupdate
   let that = this
   this.fetch_npmVersion('homebridge-homematic', npmVersion => {
